@@ -1,10 +1,10 @@
-AMREX_HOME := ../../amrex
-TOP := ../../
+AMREX_HOME := amrex
+TOP := .
 COMP := GNU
 
 DIM = 2
 
-TINY_PROFILE = TRUE
+TINY_PROFILE = FALSE
 PROFILE = FALSE
 DEBUG = FALSE
 VERBOSE = TRUE
@@ -29,7 +29,7 @@ PPROF = FALSE
 PPROF_INCLUDE = /usr/include/gperftools
 PPROF_LIB = /usr/lib/x86_64-linux-gnu
 
-include ../Make.MFP
+include ${HOME}/rep/plasmasimuq/cerberus/cerberus.rules
 
 FFLAGS   += -fcheck=array-temps -fbacktrace -fbounds-check -cpp
 F90FLAGS += -fcheck=array-temps -fbacktrace -fbounds-check -cpp

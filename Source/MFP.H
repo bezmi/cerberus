@@ -121,6 +121,7 @@ protected:
     static bool first_step;
 
     static GlobalData gd;
+    #pragma omp threadprivate(gd)
 
     static void get_lua_script();
     static void save_lua_script();

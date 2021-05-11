@@ -32,7 +32,7 @@ void MFP::variableSetUp() {
 
         // get the list of bc setting functions that applies to this type of state
         const Vector<set_bc> &setbc = istate.get_bc_set();
-        const Vector<std::string> &cons_names = gd.states[idx]->get_cons_names();
+        // const Vector<std::string> &cons_names = gd.states[idx]->get_cons_names();
 
         istate.boundary_conditions.fill_bc.resize(np);
 
@@ -52,7 +52,7 @@ void MFP::variableSetUp() {
         }
 
         for (int icomp=0; icomp < nc; ++icomp) {
-            comp_names[icomp] = cons_names[icomp] + "-" + gd.state_names[idx];
+            comp_names[icomp] = gd.states[idx]->get_cons_name(icomp) + "-" + gd.state_names[idx];
         }
 
         int ng = istate.num_grow;
@@ -130,7 +130,7 @@ void MFP::init_data(const Box& box,
     int n_prim = istate.n_prim();
     int n_cons = istate.n_cons();
     Vector<Real> Q(n_prim), U(n_cons);
-    const Vector<std::string> &prim_names = gd.states[idx]->get_prim_names();
+    // const Vector<std::string> &prim_names = gd.states[idx]->get_prim_names();
 
     for     (int k = lo.z; k <= hi.z; ++k) {
         z = prob_lo[2] + (k + 0.5)*dx[2];
@@ -153,8 +153,7 @@ void MFP::init_data(const Box& box,
 
                 // grab the primitive variables as defined by the user functions
                 for (int icomp=0; icomp<n_prim; ++icomp) {
-                    const std::string& prim_name = prim_names[icomp];
-                    const auto& f = istate.functions[prim_name];
+                    const auto& f = istate.functions[icomp];
 
                     Q[icomp] = f(x, y, z);
 

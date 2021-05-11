@@ -13,7 +13,7 @@ public:
     Ionisation(const sol::table &def);
     ~Ionisation();
 
-    static Vector<Real> ionisation(const Vector<Real> &y0, const Vector<OffsetIndex> &offsets, const Interp2D &dens_interp, const Interp2D &mom_interp, const Interp2D &nrg_interp, const Real &bind_nrg);
+    static Vector<Real> ionisation(const Vector<Real> &y0, const Vector<OffsetIndex> &offsets, Interp2D &dens_interp, Interp2D &mom_interp, Interp2D &nrg_interp, const Real &bind_nrg);
 
     virtual int fun_rhs(Real x, Real y, Real z, Real t, Vector<Real> &y0, Vector<Real> &ydot, Real dt=0) const override;
     virtual int fun_jac(Real x, Real y, Real z, Real t, Vector<Real> &y0, Vector<Real> &J) const override;
@@ -27,9 +27,9 @@ public:
     static std::string tag;
     static bool registered;
 
-    Interp2D dens_interp;
-    Interp2D mom_interp;
-    Interp2D nrg_interp;
+    mutable Interp2D dens_interp;
+    mutable Interp2D mom_interp;
+    mutable Interp2D nrg_interp;
     Real bind_nrg;
 };
 
@@ -40,7 +40,7 @@ public:
     Recombination(const sol::table &def);
     ~Recombination();
 
-    static Vector<Real> recombination(const Vector<Real> &y0, const Vector<OffsetIndex> &offsets, const Interp2D &dens_interp, const Interp2D &R_interp, const Interp2D &K_interp, const Interp2D &W_interp, const Interp2D &J_interp, const Real &bind_nrg);
+    static Vector<Real> recombination(const Vector<Real> &y0, const Vector<OffsetIndex> &offsets, Interp2D &dens_interp, Interp2D &R_interp, Interp2D &K_interp, Interp2D &W_interp, Interp2D &J_interp, const Real &bind_nrg);
 
     virtual int fun_rhs(Real x, Real y, Real z, Real t, Vector<Real> &y0, Vector<Real> &ydot, Real dt=0) const override;
     virtual int fun_jac(Real x, Real y, Real z, Real t, Vector<Real> &y0, Vector<Real> &J) const override;
@@ -54,11 +54,11 @@ public:
     static std::string tag;
     static bool registered;
 
-    Interp2D dens_interp;
-    Interp2D R_interp;
-    Interp2D K_interp;
-    Interp2D W_interp;
-    Interp2D J_interp;
+    mutable Interp2D dens_interp;
+    mutable Interp2D R_interp;
+    mutable Interp2D K_interp;
+    mutable Interp2D W_interp;
+    mutable Interp2D J_interp;
     Real bind_nrg;
 };
 

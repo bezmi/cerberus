@@ -10,7 +10,6 @@ Plasma5::Plasma5(){}
 
 Plasma5::Plasma5(const sol::table &def)
 {
-
     if (!GD::plasma_params_set) {
         Abort("Plasma parameters required for plasma5 source, define (>0) either skin_depth & beta or Larmor & Debye");
     }
@@ -53,7 +52,8 @@ Plasma5::Plasma5(const sol::table &def)
                 continue;
             case +StateType::isHydro:
             case +StateType::isHydro2P:
-                if (istate.charge[0] < 0.) {
+                // TODO: should probably have a better check for ions as AssociatedType can also be Neutral or Mix
+                if (istate.get_association_type() == AssociatedType::Electron) {
                     linked_electron_idx.push_back(idx.global);
                     continue;
                 }
@@ -64,7 +64,7 @@ Plasma5::Plasma5(const sol::table &def)
         }
     }
 
-    if (linked_EM_idx < 0 )
+    if (linked_EM_idx < 0)
         Abort("No electromagnetic field found for plasma5 source");
 //    if (linked_electron_idx.size() < 1 )
 //        Abort("No electron fluid found for plasma5 source");
@@ -126,7 +126,7 @@ int Plasma5::fun_rhs(Real x, Real y, Real z, Real t, Vector<Real> &y0, Vector<Re
 
 
     Real q, m, r;
-    Real rho, mx, my, mz, nrg, alpha;
+    Real rho, mx, my, mz, nrg;
     Real u, v, w;
 
     Real Larmor = GD::Larmor;
@@ -142,25 +142,32 @@ int Plasma5::fun_rhs(Real x, Real y, Real z, Real t, Vector<Real> &y0, Vector<Re
     Real current_y = 0.0;
     Real current_z = 0.0;
 
+    Vector<Real> cons;
+
     for (const auto &idx : offsets) {
 
         if (!idx.valid) continue;
 
         State &istate = GD::get_state(idx.global);
+        int N = istate.n_cons();
+        cons.resize(N);
         int tp = istate.get_type();
 
         if (tp == +StateType::isField)
             continue;
 
-        rho =   y0[idx.solver + +HydroState::ConsIdx::Density];
-        mx =    y0[idx.solver + +HydroState::ConsIdx::Xmom];
-        my =    y0[idx.solver + +HydroState::ConsIdx::Ymom];
-        mz =    y0[idx.solver + +HydroState::ConsIdx::Zmom];
-        nrg =   y0[idx.solver + +HydroState::ConsIdx::Eden];
-        alpha = y0[idx.solver + +HydroState::ConsIdx::Tracer]/rho;
+        for (int i = 0; i < N; ++i) {
+            cons[i] = y0[idx.solver + i];
+        }
 
-        m = istate.get_mass(alpha);
-        q = istate.get_charge(alpha);
+        rho =   cons[+HydroState::ConsIdx::Density];
+        mx =    cons[+HydroState::ConsIdx::Xmom];
+        my =    cons[+HydroState::ConsIdx::Ymom];
+        mz =    cons[+HydroState::ConsIdx::Zmom];
+        nrg =   cons[+HydroState::ConsIdx::Eden];
+
+        m = istate.get_mass_from_cons(cons);
+        q = istate.get_charge_from_cons(cons);
 
         r = q/m;
 
@@ -231,6 +238,7 @@ int Plasma5::fun_jac(Real x, Real y, Real z, Real t, Vector<Real> &y0, Vector<Re
         if (!idx.valid) continue;
 
         State &istate = GD::get_state(idx.global);
+
         int tp = istate.get_type();
 
         if (tp != +StateType::isField)
@@ -257,8 +265,9 @@ int Plasma5::fun_jac(Real x, Real y, Real z, Real t, Vector<Real> &y0, Vector<Re
 
     // fill in the jacobian
     int off;
-    Real rho, mx, my, mz, nrg, alpha;
+    Real rho, mx, my, mz, nrg;
     Real q, m, r, r_dL, c0r_dL, cf1;
+    Vector<Real> cons;
 
     for (const auto &idx : offsets) {
 
@@ -273,18 +282,21 @@ int Plasma5::fun_jac(Real x, Real y, Real z, Real t, Vector<Real> &y0, Vector<Re
         if (tp == +StateType::isField) {
             continue;
         }
+        int N = istate.n_cons();
+        cons.resize(N);
 
+        for (int i = 0; i < N; ++i) {
+            cons[i] = y0[off + i];
+        }
 
+        rho =   cons[+HydroState::ConsIdx::Density];
+        mx =    cons[+HydroState::ConsIdx::Xmom];
+        my =    cons[+HydroState::ConsIdx::Ymom];
+        mz =    cons[+HydroState::ConsIdx::Zmom];
+        nrg =   cons[+HydroState::ConsIdx::Eden];
 
-        rho =   y0[off + +HydroState::ConsIdx::Density];
-        mx =    y0[off + +HydroState::ConsIdx::Xmom];
-        my =    y0[off + +HydroState::ConsIdx::Ymom];
-        mz =    y0[off + +HydroState::ConsIdx::Zmom];
-        nrg =   y0[off + +HydroState::ConsIdx::Eden];
-        alpha = y0[off + +HydroState::ConsIdx::Tracer]/rho;
-
-        m = istate.get_mass(alpha);
-        q = istate.get_charge(alpha);
+        m = istate.get_mass_from_cons(cons);
+        q = istate.get_charge_from_cons(cons);
 
         r = q/m;
         r_dL = r/dL;
@@ -342,7 +354,7 @@ int Plasma5::face_src(Real x, Real y, Real z, Real t, Vector<Real> &y0, Array<Ve
 
     current.fill(0.0);
 
-    Real alpha, rho, r, q, m;
+    Real rho, r, q, m;
 
     // calculate the current
 
@@ -352,15 +364,22 @@ int Plasma5::face_src(Real x, Real y, Real z, Real t, Vector<Real> &y0, Array<Ve
 
         State &istate = GD::get_state(idx.global);
         int tt = istate.get_type();
+        Vector<Real> cons;
 
         if (tt == +StateType::isField)
             continue;
 
-        rho =   y0[idx.solver + +HydroState::ConsIdx::Density];
-        alpha = y0[idx.solver + +HydroState::ConsIdx::Tracer]/rho;
+        int N = istate.n_cons();
+        cons.resize(N);
 
-        m = istate.get_mass(alpha);
-        q = istate.get_charge(alpha);
+        for (int i = 0; i < N; ++i) {
+            cons[i] = y0[idx.solver + i];
+        }
+
+        rho =   cons[+HydroState::ConsIdx::Density];
+
+        m = istate.get_mass_from_cons(cons);
+        q = istate.get_charge_from_cons(cons);
 
         r = q/m;
 
@@ -428,11 +447,12 @@ Real Plasma5::get_max_freq(Vector<Real> &y) const
 
 
     Real q, m, r;
-    Real rho, alpha;
+    Real rho;
     Real omega_p, omega_c;
 
     Real D2 = GD::Debye*GD::Debye;
     Real L = GD::Larmor;
+    Vector<Real> cons;
 
     Real f = 0;
 
@@ -444,11 +464,17 @@ Real Plasma5::get_max_freq(Vector<Real> &y) const
         if (t == +StateType::isField)
             continue;
 
-        rho =   y[idx.solver + +HydroState::ConsIdx::Density];
-        alpha = y[idx.solver + +HydroState::ConsIdx::Tracer]/rho;
+        int N = istate.n_cons();
+        cons.resize(N);
 
-        m = istate.get_mass(alpha);
-        q = istate.get_charge(alpha);
+        for (int i = 0; i < N; ++i) {
+            cons[i] = y[idx.solver + i];
+        }
+
+        rho =   cons[+HydroState::ConsIdx::Density];
+
+        m = istate.get_mass_from_cons(cons);
+        q = istate.get_charge_from_cons(cons);
 
         r = q/m;
 
@@ -479,7 +505,7 @@ void Plasma5::calc_charge_density(const Box& box,
     const Dim3 hi = amrex::ubound(box);
 
     Real q, m, r;
-    Real rho, alpha;
+    Real rho;
     Real mx, my, mz;
 
     cd.setVal(0.0);
@@ -489,11 +515,14 @@ void Plasma5::calc_charge_density(const Box& box,
     Array4<Real> const& J4 = J.array();
 
     OffsetIndex field_idx;
+    Vector<Real> cons;
 
     for (const auto &idx : offsets) {
 
         State &istate = GD::get_state(idx.global);
         int t = istate.get_type();
+        int N = istate.n_cons();
+        cons.resize(N);
 
         if (t == +StateType::isField) {
             field_idx = idx;
@@ -506,13 +535,9 @@ void Plasma5::calc_charge_density(const Box& box,
         Array4<const EBCellFlag> const& f4 = flag[idx.local]->array();
 #endif
 
-        const int rho_idx = istate.get_cons_density_idx();
-        const int mom_idx = istate.get_cons_vector_idx()[0];
-        const int trc_idx = istate.get_cons_tracer_idx();
-
         Array4<const Real> const& src4 = src[idx.local]->array();
 
-        for     (int k = lo.z; k <= hi.z; ++k) {
+            for     (int k = lo.z; k <= hi.z; ++k) {
             for   (int j = lo.y; j <= hi.y; ++j) {
                 AMREX_PRAGMA_SIMD
                         for (int i = lo.x; i <= hi.x; ++i) {
@@ -522,25 +547,28 @@ void Plasma5::calc_charge_density(const Box& box,
                         continue;
                     }
 #endif
+                    for (int n = 0; n < N; ++n) {
+                        cons[n] = src4(i,j,k,n);
+                    }
 
-                    rho   = src4(i,j,k,rho_idx);
+                    rho   = cons[+HydroState::ConsIdx::Density];
 
 
 
                     if (rho <= 0.0)
                         continue;
 
-                    alpha = src4(i,j,k,trc_idx)/rho;
 
-                    q = istate.get_charge(alpha);
-                    m = istate.get_mass(alpha);
+                    q = istate.get_charge_from_cons(cons);
+                    m = istate.get_mass_from_cons(cons);
                     r = q/m;
 
                     cd4(i,j,k) += rho*r;
 
-                    mx   = src4(i,j,k,mom_idx+0);
-                    my   = src4(i,j,k,mom_idx+1);
-                    mz   = src4(i,j,k,mom_idx+2);
+                    // TODO: make this general so it works with hydro2p
+                    mx   = src4(i,j,k,+HydroState::ConsIdx::Xmom);
+                    my   = src4(i,j,k,+HydroState::ConsIdx::Ymom);
+                    mz   = src4(i,j,k,+HydroState::ConsIdx::Zmom);
                     J4(i,j,k,0) += mx*r;
                     J4(i,j,k,1) += my*r;
                     J4(i,j,k,2) += mz*r;

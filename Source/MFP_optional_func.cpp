@@ -114,3 +114,11 @@ Optional3D1VFunction get_udf(const sol::object &obj)
     }
 
 }
+
+void get_udfs(const sol::table &defs, Vector<Optional3D1VFunction> &fs)
+{
+    for (int i=0; i < defs.size(); ++i) {
+        Optional3D1VFunction f = get_udf(defs[i+1]);
+        fs[i] = f;
+    }
+}

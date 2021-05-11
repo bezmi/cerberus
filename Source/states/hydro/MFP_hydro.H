@@ -17,36 +17,56 @@ public:
     ~HydroState();
 
     enum class ConsIdx : int {
-        Density=0,
-        Xmom,
+        Xmom=0,
         Ymom,
         Zmom,
         Eden,
-        Tracer,
+        Density,
+        //Tracer,
         NUM,
     };
 
     enum class PrimIdx : int {
-        Density=0,
-        Xvel,
+        Xvel=0,
         Yvel,
         Zvel,
         Prs,
         Temp,
-        Alpha,
-        NUM,
+        Density,
+        //Alpha,
+        NUM
     };
 
     enum class FluxIdx : int {
-        Density=0,
-        Xvel,
+        Xvel=0,
         Yvel,
         Zvel,
         Prs,
-        Alpha,
         Gamma,
+        Density,
+        //Alpha,
         NUM
     };
+
+    const std::string multicomp_prim_name = "alpha";
+    const std::string multicomp_cons_name = "tracer";
+
+
+// set cons/prim_names based on ordering of Cond/PrimIdx
+    std::map<std::string, int> singular_cons_names_map = {{"rho", +HydroState::ConsIdx::Density},
+                                                            {"x_mom", +HydroState::ConsIdx::Xmom},
+                                                            {"y_mom", +HydroState::ConsIdx::Ymom},
+                                                            {"z_mom", +HydroState::ConsIdx::Zmom},
+                                                            {"nrg", +HydroState::ConsIdx::Eden}};
+
+    std::map<std::string, int> singular_prim_names_map = {{"rho", +HydroState::PrimIdx::Density},
+                                                            {"x_vel", +HydroState::PrimIdx::Xvel},
+                                                            {"y_vel", +HydroState::PrimIdx::Yvel},
+                                                            {"z_vel", +HydroState::PrimIdx::Zvel},
+                                                            {"p", +HydroState::PrimIdx::Prs},
+                                                            {"T", +HydroState::PrimIdx::Temp}};
+    Optional3D1VFunction nd_function;
+
 
     static Vector<int> flux_vector_idx;
     static Vector<int> cons_vector_idx;
@@ -62,14 +82,18 @@ public:
     static bool registered;
     static std::string tag;
 
-    static Vector<std::string> cons_names;
-    static Vector<std::string> prim_names;
+    bool is_multicomponent = false;
+    bool is_two_component = false;
+
     static Vector<set_bc> bc_set;
 
     bool enforce_positivity = false;
-    const Vector<int> enforce_positivity_idx = {+ConsIdx::Density, +ConsIdx::Eden};
+    // const Vector<int> enforce_positivity_idx = {+ConsIdx::Density, +ConsIdx::Eden};
 
     bool extra_slope_limits = true;
+
+    int n_components = 0;
+    int n_alphas = 0;
 
     virtual void init_from_lua() override;
 #ifdef AMREX_USE_EB
@@ -82,31 +106,33 @@ public:
     virtual const std::string& get_tag() const override {return tag;}
     virtual int get_type() const override {return +StateType::isHydro;}
     virtual AssociatedType get_association_type() const override;
-    virtual int n_prim() const override {return +PrimIdx::NUM;}
-    virtual int n_cons() const override {return +ConsIdx::NUM;}
-    virtual int n_flux() const override {return +FluxIdx::NUM;}
+    virtual int n_prim() const override;
+    virtual int n_cons() const override;
+    virtual int n_flux() const override;
 
     virtual bool get_enforce_positivity() const override {return enforce_positivity;}
-    virtual Vector<int> get_enforce_positivity_idx() const override {return enforce_positivity_idx;}
+    // virtual Vector<int> get_enforce_positivity_idx() const override {return enforce_positivity_idx;}
 
     virtual const Vector<std::string>& get_cons_names() const override;
     virtual const Vector<std::string>& get_prim_names() const override;
+    virtual const std::string get_prim_name(int idx) const override;
+    virtual const std::string get_cons_name(int idx) const override;
     virtual const Vector<set_bc>& get_bc_set() const override;
 
-    virtual Real get_mass(Real alpha) const override;
-    virtual Real get_mass(const Vector<Real> &U) const override;
+    Vector<Real> get_alphas_from_cons(const Vector<Real> &U) const;
 
-    virtual Real get_charge(Real alpha) const override;
-    virtual Real get_charge(const Vector<Real> &U) const override;
+    virtual Real get_mass_from_cons(const Vector<Real> &U) const override;
+    virtual Real get_charge_from_cons(const Vector<Real> &U) const override;
+    Real get_gamma_from_cons(const Vector<Real> &U) const;
+    Real get_cp_from_cons(const Vector<Real> &U) const;
 
-    virtual Real get_gamma(Real alpha) const override;
-    virtual Real get_gamma(const Vector<Real> &U) const override;
+    Real get_mass_from_prim(const Vector<Real> &Q) const;
+    Real get_charge_from_prim(const Vector<Real> &Q) const;
+    Real get_gamma_from_prim(const Vector<Real> &Q) const;
+    Real get_cp_from_prim(const Vector<Real> &Q) const;
 
-    virtual Real get_cp(Real alpha) const override;
-    virtual Real get_cp(const Vector<Real> &U) const override;
-
-    virtual bool cons2prim(Vector<Real>& U, Vector<Real>& Q) const;
-    virtual bool cons2prim(Vector<autodiff::dual>& U, Vector<autodiff::dual>& Q) const;
+    virtual bool cons2prim(Vector<Real>& U, Vector<Real>& Q) const override;
+    virtual bool cons2prim(Vector<autodiff::dual>& U, Vector<autodiff::dual>& Q) const override;
 
     virtual void prim2cons(Vector<Real>& Q, Vector<Real>& U) const override;
     virtual bool prim_valid(Vector<Real>& Q) const override;
@@ -145,22 +171,6 @@ public:
     virtual dual get_density_from_prim(const Vector<dual> &Q) const override
     {
         return Q[+PrimIdx::Density];
-    }
-
-    virtual int get_cons_tracer_idx() const override {return +ConsIdx::Tracer;}
-    virtual int get_prim_alpha_idx() const override {return +PrimIdx::Alpha;}
-
-    virtual Real get_alpha_from_cons(const Vector<Real> &U) const override
-    {
-        return U[+ConsIdx::Tracer]/U[+ConsIdx::Density];
-    }
-    virtual Real get_alpha_from_prim(const Vector<Real> &Q) const override
-    {
-        return Q[+PrimIdx::Alpha];
-    }
-    virtual dual get_alpha_from_prim(const Vector<dual> &Q) const override
-    {
-        return Q[+PrimIdx::Alpha];
     }
 
     virtual Real get_energy_from_cons(const Vector<Real> &U) const override;

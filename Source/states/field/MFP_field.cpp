@@ -126,7 +126,7 @@ void FieldState::init_from_lua()
                     } else {
                         v = get_udf(bcv);
                     }
-                    bs.set(ax,input_names[var.second],lh,v);
+                    bs.set(ax,var.second,lh,v);
 
                     // special case for inflow condition
                     if (i_side_bc == PhysBCType::inflow && !v.is_valid()) {

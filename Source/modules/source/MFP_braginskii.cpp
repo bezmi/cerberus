@@ -87,13 +87,13 @@ void BraginskiiSource::calc_slopes(const Box& box,
     const Dim3 hi = amrex::ubound(slope_box);
 
     // First calculate the primitive variables magnetic field
-    const int nc = +HydroState::ConsIdx::NUM;
-    const int np = +HydroState::PrimIdx::NUM;
-
     FArrayBox buffer(slope_box, +HydroState::PrimIdx::Prs);
     Array4<Real> const& b4 = buffer.array();
 
     State& istate = GD::get_state(linked_hydro);
+    const int nc = istate.n_cons();
+    const int np = istate.n_prim();
+
     Array4<const Real> const& h4 = src_dat[linked_hydro]->array();
     Vector<Real> U(nc), Q(np);
 

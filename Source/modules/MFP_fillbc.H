@@ -9,10 +9,10 @@ using namespace amrex;
 
 struct StateBC
 {
-    std::map<std::string,Optional3D1VFunction> functions;
+    std::map<int,Optional3D1VFunction> functions;
     bool has_function = false;
     bool is_valid = false;
-    void add_function(const std::string name, const Optional3D1VFunction &fun);
+    void add_function(const int idx, const Optional3D1VFunction &fun);
 };
 
 class BoundaryState
@@ -21,16 +21,17 @@ public:
     void post_init();
     std::string str(const std::string &prefix="") const;
 
-    void set_lo(int d, const std::string name, const Optional3D1VFunction &f);
-    void set_hi(int d, const std::string name, const Optional3D1VFunction &f);
-    void set(int d, const std::string name, int s, const Optional3D1VFunction &f);
+    void set_lo(int d, const int idx, const Optional3D1VFunction &f);
+    void set_hi(int d, const int idx, const Optional3D1VFunction &f);
+    void set(int d, const int idx, int s, const Optional3D1VFunction &f);
+    void set_phys_fill_bc(const int dir, const int bc_val, const int side, const int idx);
 
-    const Optional3D1VFunction& get(int hl, int dir, const std::string name) const;
+    const Optional3D1VFunction& get(int hl, int dir, const int idx) const;
 
-    const Optional3D1VFunction& get_lo(int dir, const std::string name) const;
-    Optional3D1VFunction& get_lo(int dir, const std::string name);
-    const Optional3D1VFunction& get_hi(int dir, const std::string name) const;
-    Optional3D1VFunction& get_hi(int dir, const std::string name);
+    const Optional3D1VFunction& get_lo(int dir, const int idx) const;
+    Optional3D1VFunction& get_lo(int dir, const int idx);
+    const Optional3D1VFunction& get_hi(int dir, const int idx) const;
+    Optional3D1VFunction& get_hi(int dir, const int idx);
 
     const StateBC& get_lo(int dir) const;
     const StateBC& get_hi(int dir) const;

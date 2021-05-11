@@ -12,7 +12,7 @@ class Elastic : public SourceTerm
         Elastic(const sol::table& def);
         ~Elastic();
 
-        static Vector<Real> elastic(const Vector<Real> &y0, const Vector<OffsetIndex> &offsets, const Interp2D &mom_interp, const Interp2D &nrg_interp);
+        static Vector<Real> elastic(const Vector<Real> &y0, const Vector<OffsetIndex> &offsets, Interp2D &mom_interp, Interp2D &nrg_interp);
 
         virtual int fun_rhs(Real x, Real y, Real z, Real t, Vector<Real> &y0, Vector<Real> &ydot, Real dt=0) const override;
         virtual int fun_jac(Real x, Real y, Real z, Real t, Vector<Real> &y0, Vector<Real> &J) const override;
@@ -26,8 +26,8 @@ class Elastic : public SourceTerm
         static std::string tag;
         static bool registered;
 
-        Interp2D mom_interp;
-        Interp2D nrg_interp;
+        mutable Interp2D mom_interp;
+        mutable Interp2D nrg_interp;
 };
 
 

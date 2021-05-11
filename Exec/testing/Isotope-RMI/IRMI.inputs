@@ -5,7 +5,7 @@ fpe_trap_overflow=1
 amr.v = 0
 
 # ======== TIME ==========
-max_step  = 1000000
+max_step  = 10000000
 stop_time = 0.3
 
 # ======== DOMAIN ==========
@@ -198,7 +198,7 @@ function tracer(dat)
         t = RMI_interface_B(x, y, 0, 1)
     end
     
-    return t
+    return 0.5*t
 end
 
 function pressure(dat)
@@ -218,57 +218,55 @@ states = {
 
     ion = {
         type='hydro',
-        mass={mass_ion_L, mass_ion_R},  
-        charge= 1.0, 
-        gamma=5/3, 
-        reconstruction='minmod', 
+        mass={mass_ion_L, mass_ion_R},
+        charge= {1.0, 1.0},
+        gamma={5/3, 5/3},
+        reconstruction='minmod',
         flux='HLLC',
         refine_grad_threshold = {rho=0.1},
         value = {
             nd = number_density,
             x_vel =   velocity_x,
             p =   pressure,
-            alpha = tracer,
+            alpha = {tracer},
         },
-        particles='particle_file'
     },
 
-    electron = {
-        type='hydro',
-        mass=mass_electron, 
-        charge=-1.0, 
-        gamma=5/3, 
-        reconstruction='minmod',  
-        flux='HLLC',
-        refine_grad_threshold = {rho=0.1},
-        value = {
-            nd = number_density,
-            x_vel =   velocity_x,
-            p =   pressure,
-            alpha = tracer,
-        },
-        particles='particle_file'
-    },
+    -- electron = {
+    --     type='hydro',
+    --     mass={mass_electron},
+    --     charge={-1.0},
+    --     gamma={5/3},
+    --     reconstruction='minmod',
+    --     flux='HLLC',
+    --     refine_grad_threshold = {rho=0.1},
+    --     value = {
+    --         nd = number_density,
+    --         x_vel =   velocity_x,
+    --         p =   pressure,
+    --         -- alpha = {tracer, tracer},
+    --     },
+    -- },
 
 
-    field = {
-        type='field',
-        reconstruction='O6', 
-        flux='RankineHugoniot',
-        project_divergence = 1,
-    }
+    -- field = {
+    --     type='field',
+    --     reconstruction='O6',
+    --     flux='RankineHugoniot',
+    --     project_divergence = 1,
+    -- }
 }
 
 sources = {
 
-    plasma={
-        solver = 'explicit',
-        sources = {
-            plasma={'ion', 'electron', 'field',
-                type='plasma5',
-            },
-        },
-    },    
+    -- plasma={
+    --     solver = 'explicit',
+    --     sources = {
+    --         plasma={'ion', 'electron', 'field',
+    --             type='plasma5',
+    --         },
+    --     },
+    -- },
 }
 
 "

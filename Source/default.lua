@@ -62,6 +62,7 @@ plot = {
 }
 
 -- ======== STATES ==========
+-- TODO: standardise the formatting for this documentation.
 
 --[[
 Define each state and how it is to be solved.
@@ -137,6 +138,7 @@ Valid options for a hydro state are:
 - type : type of hydrodynamic fluid, options are:
     * 'hydro'
     * 'hydro_2p'
+TODO: should this be removed?
     * 'hydro_BT'
     * 'mhd'
 
@@ -388,7 +390,7 @@ The type of the bc must be given and is particular to the state which it is bein
 All other entries in the list are defined by what is required by that particular type of bc.
 NOTE: The order of the entries in the embedded_boundaries list is by sorted order
  of the names
-
+--
 EB bcs:
 
 slip_wall : inviscid wall condition

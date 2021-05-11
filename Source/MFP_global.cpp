@@ -211,8 +211,6 @@ void GlobalData::read_config(const Vector<int> &is_periodic, const bool plot_out
         state_names[global_idx] = name;
         state_index[name] = global_idx;
 
-        full_state_size += states[global_idx]->n_cons();
-
         global_idx++;
     }
 
@@ -222,6 +220,7 @@ void GlobalData::read_config(const Vector<int> &is_periodic, const bool plot_out
 
     for (auto &istate : states) {
         istate->init_from_lua();
+        full_state_size += istate->n_cons();
     }
 
     //
@@ -466,8 +465,8 @@ void GlobalData::read_config(const Vector<int> &is_periodic, const bool plot_out
 
         for (int idx=0; idx<num_solve_state; ++idx) {
             State &istate = get_state(idx);
-            for (auto& name : istate.get_prim_names()) {
-                plot_variables[name+"-"+istate.name][0] = 0;
+            for (int i=0; i<istate.n_prim(); ++i) {
+                plot_variables[istate.get_prim_name(i)+"-"+istate.name][0] = 0;
             }
 
 #ifdef AMREX_USE_EB

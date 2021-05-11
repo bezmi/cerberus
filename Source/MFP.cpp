@@ -353,7 +353,7 @@ void MFP::printTotal()  {
         account << "\n[MFP] " << istate.name << "\n";
 
         for (int comp = 0; comp < nc; ++comp) {
-            std::string name = istate.get_cons_names()[comp];
+            std::string name = istate.get_cons_name(comp);
             account << "      Total " << name << " is " << tot[comp];
 
             if (!first_step) {

@@ -58,6 +58,7 @@ enum class AssociatedType {
     Neutral,
     Ion,
     Electron,
+    Mix,
     Field,
     MHD,
 };
@@ -97,7 +98,7 @@ class State
         BoundaryState boundary_conditions;
 
         bool mass_const, charge_const, gamma_const;
-        Array<Real,2> mass, charge, gamma;
+        Vector<Real> mass, charge, gamma;
 
         int num_grow;
 
@@ -119,7 +120,7 @@ class State
 
         bool projection_cleaning = false;
 
-        std::map<std::string,Optional3D1VFunction> functions;
+        std::map<int,Optional3D1VFunction> functions; // index is for primitive values
         std::map<int,Optional3D1VFunction*> dynamic_functions; // index is for primitive values
 
         std::unique_ptr<Reconstruction> reconstruction;
@@ -167,18 +168,22 @@ class State
         int get_shock_idx() const {return shock_idx;}
 
         virtual const Vector<std::string>& get_cons_names() const = 0;
+        virtual const std::string get_cons_name(const int idx) const {return get_cons_names()[idx];}
         virtual const Vector<std::string>& get_prim_names() const = 0;
+        virtual const std::string get_prim_name(const int idx) const {return get_prim_names()[idx];}
         virtual const Vector<std::pair<int,Real>> init_with_value() const {return {};}
         virtual const Vector<set_bc>& get_bc_set() const = 0;
 
         virtual Real get_mass(Real alpha) const {return 0.0;}
         virtual Real get_mass(const Vector<Real> &U) const{return 0.0;}
+        virtual dual get_mass(const Vector<dual> &U) const{return 0.0;}
 
         virtual Real get_charge(Real alpha) const{return 0.0;}
         virtual Real get_charge(const Vector<Real> &U) const{return 0.0;}
 
         virtual Real get_gamma(Real alpha) const{return 0.0;}
         virtual Real get_gamma(const Vector<Real> &U) const{return 0.0;}
+        virtual dual get_gamma(const Vector<dual> &U) const{return 0.0;}
 
         virtual Real get_cp(Real alpha) const{return 0.0;}
         virtual Real get_cp(const Vector<Real> &U) const{return 0.0;}
@@ -212,6 +217,9 @@ class State
         virtual void update_div_clean(const Real* dx) {}
 
         virtual Real get_density_from_cons(const Vector<Real> &U) const {return -1.0;}
+        virtual Real get_mass_from_cons(const Vector<Real> &U) const {return -1.0;}
+        virtual Real get_charge_from_cons(const Vector<Real> &U) const {return -1.0;}
+        virtual dual get_density_from_cons(const Vector<dual> &U) const {return -1.0;}
         virtual Real get_density_from_prim(const Vector<Real> &Q) const {return -1.0;}
         virtual dual get_density_from_prim(const Vector<dual> &Q) const {return -1.0;}
 

@@ -29,15 +29,12 @@ State::State()
 
     project_divergence = 0;
 
-    mass = {0,0};
-    charge = {0,0};
-    gamma = {0,0};
-
     num_grow = 0;
 
     pressure_relaxation_rate = 0.0;
 
     particle_index = -1;
+
 
 }
 State::~State(){}
@@ -125,7 +122,10 @@ void State::set_udf()
 
     const auto ignore = init_with_value();
 
-    const Vector<std::string> &prim_names = get_prim_names();
+    Vector<std::string> prim_names;
+    for (int i=0; i < n_prim(); ++i) {
+        prim_names.push_back(get_prim_name(i));
+    }
     for (int i = 0; i<prim_names.size(); ++i) {
 
         const std::string &comp = prim_names[i];
@@ -149,12 +149,12 @@ void State::set_udf()
             }
         }
 
-        functions[comp] = v;
+        functions[i] = v;
 
         if (dynamic.valid()) {
             for (const auto &d : dynamic) {
                 if (d.second.as<std::string>().compare(comp) == 0) {
-                    dynamic_functions[i] = &functions[comp];
+                    dynamic_functions[i] = &functions[i];
                 }
             }
         }
@@ -278,8 +278,14 @@ void State::set_grad_refinement()
         return;
     }
 
-    const Vector<std::string> &cons = get_cons_names();
-    const Vector<std::string> &prim = get_prim_names();
+    Vector<std::string> cons;
+    Vector<std::string> prim;
+    for (int i=0; i < n_cons(); ++i) {
+        cons.push_back(get_cons_name(i));
+    }
+    for (int i=0; i < n_prim(); ++i) {
+        prim.push_back(get_prim_name(i));
+    }
 
     Real min_value = thresh["min_value"].get_or(0.0);
 
@@ -563,6 +569,7 @@ void State::calc_reconstruction(const Box& box,
 
                         lo4(i,j,k,n) = lo_face;
                         hi4(i,j,k,n) = hi_face;
+                        // std::cout << "lo: " << std::to_string(lo_face) << ", hi: " << std::to_string(hi_face) << "\n";
                     }
                 }
             }
@@ -700,6 +707,7 @@ void State::calc_time_averaged_faces(const Box& box,
                         hi_face = hi4(i,j,k,n);
                         centre = p4(i,j,k,n);
 
+                        // std::cout << std::to_string(n) << ", " << std::to_string(lo_face) << ", " << std::to_string(hi_face) << ", " << std::to_string(centre) << "\n";
                         a6 = 6.0*centre - 3*(lo_face + hi_face);
 
                         lo4(i,j,k,n) += local_c[d]*dt_2dx*(hi_face - lo_face + (1 - local_c[d]*ft*dt_2dx)*a6);
@@ -921,7 +929,10 @@ void State::update_boundary_cells(const Box& box,
     const Real* dx = geom.CellSize();
     const Real* prob_lo = geom.ProbLo();
 
-    const Vector<std::string> prims = get_prim_names();
+    Vector<std::string> prims;
+    for (int i=0; i < n_prim(); ++i) {
+        prims.push_back(get_prim_name(i));
+    }
 
     Real x, y, z;
     std::map<std::string, Real> Q{{"t", time}};
@@ -976,7 +987,7 @@ void State::update_boundary_cells(const Box& box,
 
                         // update the primitives from our UDFs, but only those that are valid functions
                         for (int n=0; n<ncomp; ++n) {
-                            const Optional3D1VFunction &f = boundary_conditions.get(L.lo_hi, L.dir, prims[n]);
+                            const Optional3D1VFunction &f = boundary_conditions.get(L.lo_hi, L.dir, n);
                             if (f.is_valid()) {
                                 p4(i,j,k,n) = f(Q);
                             }
@@ -1017,7 +1028,10 @@ void State::face_bc(const int dir,
     Real x, y, z;
     std::map<std::string, Real> Q{{"t", time}};
 
-    const Vector<std::string> prims = get_prim_names();
+    Vector<std::string> prims;
+    for (int i=0; i < n_prim(); ++i) {
+        prims.push_back(get_prim_name(i));
+    }
 
     // define the limits of our operations
     Vector<BoundaryInfo> limits;
@@ -1193,7 +1207,7 @@ void State::face_bc(const int dir,
 
                         // update the primitives from our UDFs, but only those that are valid functions
                         for (int n=0; n<numcomp; ++n) {
-                            const Optional3D1VFunction &f = boundary_conditions.get(L.lo_hi, dir, prims[n]);
+                            const Optional3D1VFunction &f = boundary_conditions.get(L.lo_hi, dir, n);
                             if (f.is_valid()) {
                                 d4(i,j,k,n) = f(Q);
                             }
@@ -1311,6 +1325,7 @@ void State::calc_fluxes(const Box& box,
     int nc = n_cons();
     int np = n_prim();
     int nf = n_flux();
+
     Vector<int> rotate_idx_flux = get_flux_vector_idx();
     Vector<int> rotate_idx_cons = get_cons_vector_idx();
 
@@ -1715,7 +1730,11 @@ std::string State::str() const
 #endif
 
     msg << "    boundary conditions: \n";
-    msg << "      names=" << vec2str(get_prim_names()) << "\n";
+    Vector<std::string> prims;
+    for (int i=0; i < n_prim(); ++i) {
+        prims.push_back(get_prim_name(i));
+    }
+    msg << "      names=" << vec2str(prims) << "\n";
     msg << boundary_conditions.str("      ");
 
     msg << "    refinement: ";
@@ -1728,9 +1747,9 @@ std::string State::str() const
     for (const auto &v : refine_grad_threshold) {
         msg << "      ";
         if (std::get<bool>(v)) {
-            msg << get_prim_names()[std::get<int>(v)];
+            msg << get_prim_name(std::get<int>(v));
         } else {
-            msg << get_cons_names()[std::get<int>(v)];
+            msg << get_cons_name(std::get<int>(v));
         }
         msg << "(>" << num2str(std::get<3>(v)) <<") " << num2str(std::get<2>(v)) <<"\n";
     }
@@ -1739,15 +1758,12 @@ std::string State::str() const
 
     msg << "    initial conditions: \n";
     std::pair<bool, int > check;
-    for (const auto &f : functions) {
-        msg << "      " << f.first << "=" << f.second;
+    for (const auto& [prim_idx, f] : functions) {
+        msg << "      " << get_prim_name(prim_idx) << "=" << f;
 
         // check if this is also a dynamic function
-        check = findInVector(get_prim_names(), f.first); // get the index
-        if (check.first) {
-            if ( dynamic_functions.find(check.second) != dynamic_functions.end() ) {
-                msg << " (dynamic)";
-            }
+        if ( dynamic_functions.find(prim_idx) != dynamic_functions.end() ) {
+            msg << " (dynamic)";
         }
         msg << "\n";
     }

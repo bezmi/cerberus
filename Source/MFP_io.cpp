@@ -435,7 +435,12 @@ void MFP::writePlotFilePost(const std::string &dir, std::ostream &os)
             }
         }
 
-        grp["cons_names"] = istate.get_cons_names();
+        Vector<std::string> cons_names;
+        for (int i=0; i < istate.n_cons(); ++i) {
+            cons_names.push_back(istate.get_cons_name(i));
+        }
+
+        grp["cons_names"] = cons_names;//istate.get_cons_names();
 
 #ifdef AMREX_PARTICLES
         if (gd.do_tracer_particles) {

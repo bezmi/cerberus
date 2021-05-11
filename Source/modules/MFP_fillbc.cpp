@@ -8,52 +8,61 @@
 
 using GD = GlobalData;
 
-void StateBC::add_function(const std::string name, const Optional3D1VFunction &fun)
+void StateBC::add_function(const int prim_idx, const Optional3D1VFunction &fun)
 {
-    functions[name] = fun;
+    functions[prim_idx] = fun;
 
     if (fun.has_func()) {
         has_function = true;
     }
+
     if (fun.is_valid()) {
         is_valid = true;
     }
 }
 
-void BoundaryState::set(int d, const std::string name, int s, const Optional3D1VFunction &f)
+void BoundaryState::set(int d, const int prim_idx, int s, const Optional3D1VFunction &f)
 {
-    data[s][d].add_function(name, f);
+    data[s][d].add_function(prim_idx, f);
 }
 
-void BoundaryState::set_lo(int d, const std::string name, const Optional3D1VFunction &f)
+void BoundaryState::set_lo(int d, const int prim_idx, const Optional3D1VFunction &f)
 {
-    data[0][d].add_function(name, f);
+    data[0][d].add_function(prim_idx, f);
 }
 
-void BoundaryState::set_hi(int d, const std::string name, const Optional3D1VFunction &f)
+void BoundaryState::set_hi(int d, const int prim_idx, const Optional3D1VFunction &f)
 {
-    data[1][d].add_function(name, f);
+    data[1][d].add_function(prim_idx, f);
 }
 
-const Optional3D1VFunction& BoundaryState::get(int hl, int dir, const std::string name) const {
-    return data[hl][dir].functions.at(name);
+void BoundaryState::set_phys_fill_bc(const int dir, const int bc_val, const int side, const int idx)
+{
+    if (side == 0)
+        phys_fill_bc[idx].setLo(dir, bc_val);
+    if (side == 1)
+        phys_fill_bc[idx].setHi(dir, bc_val);
 }
 
-const Optional3D1VFunction& BoundaryState::get_lo(int dir, const std::string name) const {
-    return data[0][dir].functions.at(name);
+const Optional3D1VFunction& BoundaryState::get(int hl, int dir, const int prim_idx) const {
+    return data[hl][dir].functions.at(prim_idx);
 }
 
-Optional3D1VFunction& BoundaryState::get_lo(int dir, const std::string name) {
-    return data[0][dir].functions.at(name);
+const Optional3D1VFunction& BoundaryState::get_lo(int dir, const int prim_idx) const {
+    return data[0][dir].functions.at(prim_idx);
+}
+
+Optional3D1VFunction& BoundaryState::get_lo(int dir, const int prim_idx) {
+    return data[0][dir].functions.at(prim_idx);
 }
 
 
-const Optional3D1VFunction& BoundaryState::get_hi(int dir, const std::string name) const {
-    return data[1][dir].functions.at(name);
+const Optional3D1VFunction& BoundaryState::get_hi(int dir, const int prim_idx) const {
+    return data[1][dir].functions.at(prim_idx);
 }
 
-Optional3D1VFunction& BoundaryState::get_hi(int dir, const std::string name) {
-    return data[1][dir].functions[name];
+Optional3D1VFunction& BoundaryState::get_hi(int dir, const int prim_idx) {
+    return data[1][dir].functions[prim_idx];
 }
 
 const StateBC& BoundaryState::get_lo(int dir) const
@@ -108,6 +117,7 @@ std::string BoundaryState::str(const std::string &prefix) const {
         for (int i=0; i<2; ++i) {
 
             Vector<std::string> bc;
+            // std::cout << "SIZE: " << std::to_string(fill_bc.size()) << "\n";
             for (const auto &bcr : fill_bc) {
                 bc.push_back(bc_types.at(bcr.data()[i*AMREX_SPACEDIM + d]));
             }
@@ -117,10 +127,11 @@ std::string BoundaryState::str(const std::string &prefix) const {
             if (where_is_inflow.data()[i*AMREX_SPACEDIM + d] == BCType::ext_dir) {
 
                 // get all of the keys
-                const std::map<std::string, Optional3D1VFunction> &m = data[i][d].functions;
+                // TODO: This should fetch the primitive names instead of just printing the index
+                const std::map<int, Optional3D1VFunction> &m = data[i][d].functions;
                 Vector<std::string> keys;
-                for(std::map<std::string,Optional3D1VFunction>::const_iterator it = m.begin(); it != m.end(); ++it) {
-                  keys.push_back(it->first);
+                for(const auto& [prim_idx, func] : m) {
+                  keys.push_back(std::to_string(prim_idx));
                 }
 
 

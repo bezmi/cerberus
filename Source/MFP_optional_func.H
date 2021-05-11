@@ -35,5 +35,6 @@ std::ostream& operator<<(std::ostream &os, const Optional3D1VFunction& f);
 
 bool get_udf(const sol::object &obj, Optional3D1VFunction &v, const Real fallback);
 Optional3D1VFunction get_udf(const sol::object &obj);
+void get_udfs(const sol::table &defs, Vector<Optional3D1VFunction> &fs);
 
 #endif // MFP_TYPES_H
